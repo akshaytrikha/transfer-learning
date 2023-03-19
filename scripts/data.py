@@ -1,7 +1,82 @@
 from pathlib import Path
-from torchvision import datasets, transforms
+from torch.utils.data import Dataset
+from torchvision import transforms
 from torch.utils.data import DataLoader
-from typing import Tuple, List
+from typing import Tuple, List, Dict
+import os
+import re
+from PIL import Image
+import json
+
+
+IMAGE_FILE_REGEX = re.compile("[-\w]+\.(?:png|jpg|jpeg|tif|tiff|bmp)")
+"""allowed image file extensions"""
+
+
+def pil_loader(path: str, mode: str) -> Image.Image:
+    # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
+    with open(path, "rb") as f:
+        img = Image.open(f)
+        return img.convert(mode)
+
+
+def find_classes(class_map_path: Path) -> Tuple[List[str], Dict[str, int]]:
+    """Loads classes from class_map_path"""
+
+    with open(class_map_path, "rb") as open_file:
+        idx_to_class = json.load(open_file)
+
+    classes = idx_to_class.values()
+
+    return classes, idx_to_class
+
+
+class SegmentationDataset(Dataset):
+    def __init__(
+        self,
+        dir_path: Path,
+        class_map_path: Path,
+        image_transform: transforms.Compose,
+        mask_transform: transforms.Compose,
+    ):
+        # store the image & mask filepaths, augmentation transforms
+        self.image_paths = [
+            dir_path / "Images" / x
+            for x in os.listdir(dir_path / "Images")
+            if IMAGE_FILE_REGEX.match(x)
+        ]
+        self.mask_paths = [
+            dir_path / "Segmentations" / x
+            for x in os.listdir(dir_path / "Segmentations")
+            if IMAGE_FILE_REGEX.match(x)
+        ]
+        self.image_transform = image_transform
+        self.mask_transform = mask_transform
+
+        self.classes, self.idx_to_class = find_classes(class_map_path)
+
+    def __len__(self):
+        # return the number of total samples contained in the dataset
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        # load image and mask into memory
+        image = pil_loader(self.image_paths[idx], mode="RGB")
+        mask = pil_loader(self.mask_paths[idx], mode="L")
+
+        # apply transformations to image & mask
+        if self.image_transform is not None:
+            image = self.image_transform(image)
+
+        if self.mask_transform is not None:
+            mask = self.mask_transform(mask)
+
+        return (image, mask)
+
+    def get_images(self, idx):
+        image, mask = self[idx]
+        T = transforms.ToPILImage()
+        return T(image), T(mask)
 
 
 def create_dataloaders(
@@ -9,7 +84,8 @@ def create_dataloaders(
     dev_dir: Path,
     test_dir: Path,
     batch_size: int,
-    transform: transforms.Compose,
+    image_transform: transforms.Compose,
+    mask_transform: transforms.Compose,
     num_workers: int = 0,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """create dataloaders from corresponding directories
@@ -25,9 +101,25 @@ def create_dataloaders(
         Tuple[train_dataloader, test_dataloader, class_names]
     """
     # read data
-    train_data = datasets.ImageFolder(train_dir, transform=transform)
-    dev_data = datasets.ImageFolder(dev_dir, transform=transform)
-    test_data = datasets.ImageFolder(dev_dir, transform=transform)
+    class_map_path = train_dir.parent / "defect_map.json"
+    train_data = SegmentationDataset(
+        train_dir,
+        class_map_path,
+        image_transform=image_transform,
+        mask_transform=mask_transform,
+    )
+    dev_data = SegmentationDataset(
+        dev_dir,
+        class_map_path,
+        image_transform=image_transform,
+        mask_transform=mask_transform,
+    )
+    test_data = SegmentationDataset(
+        test_dir,
+        class_map_path,
+        image_transform=image_transform,
+        mask_transform=mask_transform,
+    )
 
     class_names = train_data.classes
 

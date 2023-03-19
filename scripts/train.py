@@ -3,7 +3,7 @@ from torch import nn
 import torchvision
 from torchvision import transforms
 import torchmetrics
-from torchsummary import summary
+from torchinfo import summary
 from pathlib import Path
 import os
 import pandas as pd
@@ -19,9 +19,9 @@ NUM_BATCHES = 32
 NUM_EPOCHS = 100
 LEARNING_RATE = 0.001
 
-TRAIN_DIR = Path("./data/train/images")
-DEV_DIR = Path("./data/dev/images")
-TEST_DIR = Path("./data/test/images")
+TRAIN_DIR = Path("./data/train/")
+DEV_DIR = Path("./data/dev/")
+TEST_DIR = Path("./data/test/")
 
 if torch.backends.mps.is_available() and torch.backends.mps.is_built():
     device = "mps"
@@ -29,11 +29,18 @@ else:
     device = "cpu"
 
 # ------------------ Data ------------------
-transform = transforms.Compose(
+image_transform = transforms.Compose(
     [
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+
+mask_transform = transforms.Compose(
+    [
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
     ]
 )
 
@@ -47,9 +54,12 @@ transform = transforms.Compose(
     dev_dir=DEV_DIR,
     test_dir=TEST_DIR,
     batch_size=NUM_BATCHES,
-    transform=transform,
+    image_transform=image_transform,
+    mask_transform=mask_transform,
 )
 NUM_CLASSES = len(class_names)
+
+breakpoint()
 
 # ------------------ Model ------------------
 # instantiate pretrained resnet18 model
