@@ -11,7 +11,7 @@ def create_dataloaders(
     batch_size: int,
     transform: transforms.Compose,
     num_workers: int = 0,
-) -> Tuple[DataLoader, DataLoader, List[str]]:
+) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """create dataloaders from corresponding directories
 
     Args:
@@ -42,4 +42,4 @@ def create_dataloaders(
         test_data, batch_size=batch_size, num_workers=num_workers
     )
 
-    return train_dataloader, dev_dataloader, class_names
+    return train_dataloader, dev_dataloader, test_dataloader, class_names

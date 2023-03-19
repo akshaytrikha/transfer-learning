@@ -12,6 +12,8 @@ import utils
 
 # re-implementation from https://github.com/CSAILVision/semantic-segmentation-pytorch/
 
+NUM_CLASSES = 1
+
 MODEL_URLS = {
     "resnet18": "http://sceneparsing.csail.mit.edu/model/pretrained_resnet/resnet18-imagenet.pth",
     "resnet50": "http://sceneparsing.csail.mit.edu/model/pretrained_resnet/resnet50-imagenet.pth",
@@ -430,22 +432,21 @@ class BasicBlock(nn.Module):
         return out
 
 
-class Model(nn.Module):
+def resnet_model(n_resnet_layers: str, pretrained: bool, device=None):
     """Constructs Resnet18, 50, 101 implementation from MIT CSAIL
 
     Args:
         n_resnet_layers (str): either "resnet18", "resnet50", or "resnet101"
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
+    model = ResNet(BasicBlock, [2, 2, 2, 2])
 
-    def __init__(self, n_resnet_layers: str, pretrained: bool):
-        """Initializes all required hyperparameters for model"""
-        super().__init__()
+    if pretrained:
+        # load pretrained weights
+        model.load_state_dict(
+            utils.load_url(
+                MODEL_URLS[n_resnet_layers], map_location=torch.device(device)
+            )
+        )
 
-        model = ResNet(BasicBlock, [2, 2, 2, 2])
-
-        if pretrained:
-            # load pretrained weights
-            model.load_state_dict(utils.load_url(MODEL_URLS[n_resnet_layers]))
-
-        return model
+    return model

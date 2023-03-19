@@ -1,6 +1,7 @@
 torch==1.13.1
 torchvision==0.14.1
 torchmetrics==0.11.4
+torch-summary==1.4.5
 pandas==1.5.3
 tqdm==4.65.0
 lightning==2.0.0
