@@ -8,16 +8,18 @@ from pathlib import Path
 import os
 import pandas as pd
 import data, model, engine, utils
+from torchvision.models.segmentation.deeplabv3 import DeepLabHead
 
 
-MODEL_NAME = "Universal Resnet18 23_03_18 #1"
+MODEL_NAME = "Universal Resnet50 23_03_18 #1"
 RANDOM_SEED = 100
 NUM_WORKERS = os.cpu_count()
 
 # hyperparameterse
 NUM_BATCHES = 32
-NUM_EPOCHS = 100
+NUM_EPOCHS = 1
 LEARNING_RATE = 0.001
+NUM_CLASSES = 1  # background + foreground
 
 TRAIN_DIR = Path("./data/train/")
 DEV_DIR = Path("./data/dev/")
@@ -54,50 +56,47 @@ mask_transform = transforms.Compose(
     dev_dir=DEV_DIR,
     test_dir=TEST_DIR,
     batch_size=NUM_BATCHES,
+    device=device,
     image_transform=image_transform,
     mask_transform=mask_transform,
 )
 NUM_CLASSES = len(class_names)
 
-breakpoint()
-
 # ------------------ Model ------------------
-# instantiate pretrained resnet18 model
-model = model.resnet_model(n_resnet_layers="resnet18", pretrained=True, device=device)
+# instantiate DeepLabV3 model pretrained with resnet50 weights
+weights = torchvision.models.segmentation.DeepLabV3_ResNet50_Weights.DEFAULT
+model = torchvision.models.segmentation.deeplabv3_resnet50(weights=weights).to(device)
 
 # modify classifier layer for desired number of classes
-old_num_features = model.fc.in_features
-model.fc = nn.Linear(old_num_features, NUM_CLASSES)
+model.classifier = DeepLabHead(2048, NUM_CLASSES)
 
 model.to(device)
-
-breakpoint()
-
 torch.manual_seed = RANDOM_SEED
-
 
 # ------------------ Training ------------------
 # define loss, optimizer, accuracy
-loss_fn = nn.CrossEntropyLoss()
+loss_fn = torch.nn.MSELoss(reduction="mean")
 optimizer = torch.optim.SGD(params=model.parameters(), lr=LEARNING_RATE)
-accuracy_fn = torchmetrics.Accuracy(task="multiclass", num_classes=NUM_CLASSES)
+# accuracy_fn = torchmetrics.Accuracy(task="binary", num_classes=NUM_CLASSES - 1)
+accuracy_fn = torchmetrics.JaccardIndex(task="binary", num_classes=1)
 
-# # train model
-# training_results = engine.train(
-#     model,
-#     train_dataloader,
-#     dev_dataloader,
-#     loss_fn,
-#     optimizer,
-#     accuracy_fn,
-#     NUM_EPOCHS,
-#     device,
-# )
+# train model
+training_results = engine.train(
+    model,
+    train_dataloader,
+    dev_dataloader,
+    loss_fn,
+    optimizer,
+    accuracy_fn,
+    NUM_EPOCHS,
+    device,
+)
 
-# # save model
-# utils.save_model(model, MODEL_NAME)
 
-# # save training results
-# pd.DataFrame(training_results).to_csv(
-#     Path(f"./models/{MODEL_NAME}/{MODEL_NAME}_training.csv"), index_label="epoch"
-# )
+# save model
+utils.save_model(model, MODEL_NAME)
+
+# save training results
+pd.DataFrame(training_results).to_csv(
+    Path(f"./models/{MODEL_NAME}/{MODEL_NAME}_training.csv"), index_label="epoch"
+)

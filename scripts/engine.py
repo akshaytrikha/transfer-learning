@@ -33,12 +33,14 @@ def train_step(
         model.train()
 
         # forward pass
-        y_logits = model(X_train.to(device))
+        outputs = model(X_train.to(device))["out"]
+
+        breakpoint()
 
         # calculate loss & accuracy
-        loss = loss_fn(y_logits, y_train)
-        train_loss += loss.detach().numpy()
-        train_accuracy += accuracy_fn(y_logits, y_train).detach().numpy()
+        loss = loss_fn(outputs, y_train)
+        train_loss += loss.cpu().detach().numpy()
+        train_accuracy += accuracy_fn(outputs, y_train).detach().numpy()
 
         # clear optimizer accumulation
         optimizer.zero_grad()
@@ -84,12 +86,12 @@ def dev_step(
         # faster inferences, no autograd
         with torch.inference_mode():
             # forward pass
-            y_logits = model(X_dev.to(device))
+            outputs = model(X_dev.to(device))["out"]
 
             # calculate loss & accuracy
-            loss = loss_fn(y_logits, y_dev)
-            dev_loss += loss.detach().numpy()
-            dev_accuracy += accuracy_fn(y_logits, y_dev).detach().numpy()
+            loss = loss_fn(outputs, y_dev)
+            dev_loss += loss.cpu().detach().numpy()
+            dev_accuracy += accuracy_fn(outputs, y_dev).detach().numpy()
 
     # average loss & accuracy across batch
     dev_loss /= len(dataloader)

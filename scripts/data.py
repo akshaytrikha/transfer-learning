@@ -21,7 +21,14 @@ def pil_loader(path: str, mode: str) -> Image.Image:
 
 
 def find_classes(class_map_path: Path) -> Tuple[List[str], Dict[str, int]]:
-    """Loads classes from class_map_path"""
+    """Loads classes from class_map_path which contains data in the format:
+    {"0": "class_1",
+     "1": "class_2"
+     .
+     "n": "class_n"
+    }
+
+    """
 
     with open(class_map_path, "rb") as open_file:
         idx_to_class = json.load(open_file)
@@ -38,6 +45,7 @@ class SegmentationDataset(Dataset):
         class_map_path: Path,
         image_transform: transforms.Compose,
         mask_transform: transforms.Compose,
+        device: str,
     ):
         # store the image & mask filepaths, augmentation transforms
         self.image_paths = [
@@ -54,6 +62,7 @@ class SegmentationDataset(Dataset):
         self.mask_transform = mask_transform
 
         self.classes, self.idx_to_class = find_classes(class_map_path)
+        self.device = device
 
     def __len__(self):
         # return the number of total samples contained in the dataset
@@ -71,7 +80,7 @@ class SegmentationDataset(Dataset):
         if self.mask_transform is not None:
             mask = self.mask_transform(mask)
 
-        return (image, mask)
+        return (image.to(self.device), mask.to(self.device))
 
     def get_images(self, idx):
         image, mask = self[idx]
@@ -84,6 +93,7 @@ def create_dataloaders(
     dev_dir: Path,
     test_dir: Path,
     batch_size: int,
+    device: str,
     image_transform: transforms.Compose,
     mask_transform: transforms.Compose,
     num_workers: int = 0,
@@ -107,18 +117,21 @@ def create_dataloaders(
         class_map_path,
         image_transform=image_transform,
         mask_transform=mask_transform,
+        device=device,
     )
     dev_data = SegmentationDataset(
         dev_dir,
         class_map_path,
         image_transform=image_transform,
         mask_transform=mask_transform,
+        device=device,
     )
     test_data = SegmentationDataset(
         test_dir,
         class_map_path,
         image_transform=image_transform,
         mask_transform=mask_transform,
+        device=device,
     )
 
     class_names = train_data.classes
