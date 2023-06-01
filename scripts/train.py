@@ -82,8 +82,3 @@ training_results = engine.train(
 
 # save model
 utils.save_model(model, MODEL_NAME)
-
-# save training results
-pd.DataFrame(training_results).to_csv(
-    Path(f"./models/{MODEL_NAME}/{MODEL_NAME}_training.csv"), index_label="epoch"
-)

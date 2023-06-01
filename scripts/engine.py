@@ -7,15 +7,70 @@ from tqdm.auto import tqdm
 from typing import Tuple
 from einops import rearrange
 from constants import *
+import pandas as pd
 
 
 def step_shape_helper(
     outputs: torch.Tensor,
     target: torch.Tensor,
     batch_size: int,
+    loss_fn: nn.Module,
+    accuracy_fn: Accuracy,
 ):
-    """formats tensors in correct shape and calculates loss & accuracy"""
-    pass
+    """formats tensors in correct shape and calculates loss & accuracy
+    Args:
+        outputs (torch.Tensor): model outputs with shape (batch, classes, height, width)
+        target (torch.Tensor): ground truth training data with shape (batch, 1, height, width)
+        batch_size (int): length of current batch
+        loss_fn (nn.Module): function used to calculate loss
+        accuracy_fn (Accuracy): function used to calculate accuracy
+
+    Returns:
+        loss (torch.Tensor): calulcated loss
+        accuracy (torch.Tensor): calculated accuracy
+    """
+    # modify outputs to be in format [logit(true)] for each sample
+    # and match same dims as y_train
+    # new shape: [32, 1, height, width]
+    outputs = rearrange(
+        outputs,
+        "bat cla height width -> bat cla height width",
+        bat=batch_size,
+        cla=NUM_CLASSES,
+        height=IMAGE_HEIGHT,
+        width=IMAGE_WIDTH,
+    )
+
+    target = rearrange(
+        target,
+        "bat cla height width -> bat cla height width",
+        bat=batch_size,
+        cla=1,
+        height=IMAGE_HEIGHT,
+        width=IMAGE_WIDTH,
+    )
+
+    # calculate pytorch loss
+    loss = loss_fn(
+        outputs,
+        rearrange(target, "bat cla height width -> (bat cla) height width"),
+    )
+
+    # calculate accuracy
+    # binarize predictions by taking softmax
+    outputs = nn.functional.softmax(outputs, dim=1)[:, 1, :, :]
+    outputs = rearrange(
+        outputs,
+        "bat height width -> bat 1 height width",
+        bat=batch_size,
+        height=IMAGE_HEIGHT,
+        width=IMAGE_WIDTH,
+    )
+
+    y_pred = (outputs > 0.5).type(torch.int32)
+    # new shape: [32, 1, height, width]
+
+    return (loss, accuracy_fn(y_pred.to("cpu"), target.to("cpu")))
 
 
 def train_step(
@@ -48,52 +103,17 @@ def train_step(
         # logit = log(unnormalized probability)
         outputs = model(X_train.to(device))["out"]
 
-        # modify outputs to be in format [logit(true)] for each sample
-        # and match same dims as y_train
-        # new shape: [32, 1, height, width]
-        outputs = rearrange(
-            outputs,
-            "bat cla height width -> bat cla height width",
-            bat=len(X_train),
-            cla=NUM_CLASSES,
-            height=IMAGE_HEIGHT,
-            width=IMAGE_WIDTH,
-        )
-
-        y_train = rearrange(
-            y_train,
-            "bat cla height width -> bat cla height width",
-            bat=len(X_train),
-            cla=1,
-            height=IMAGE_HEIGHT,
-            width=IMAGE_WIDTH,
-        )
-
-        # calculate pytorch loss
-        loss = loss_fn(
-            outputs,
-            rearrange(y_train, "bat cla height width -> (bat cla) height width"),
-        )
-
-        # calculate accuracy
-        # binarize predictions by taking softmax
-        outputs = nn.functional.softmax(outputs, dim=1)[:, 1, :, :]
-        outputs = rearrange(
-            outputs,
-            "bat height width -> bat 1 height width",
-            bat=len(X_train),
-            height=IMAGE_HEIGHT,
-            width=IMAGE_WIDTH,
-        )
-
-        y_pred = (outputs > 0.5).type(torch.int32)
-        # new shape: [32, 1, height, width]
-
         # calculate loss & accuracy
-        train_loss += loss.cpu().detach().numpy()
-        train_accuracy += (
-            accuracy_fn(y_pred.to("cpu"), y_train.to("cpu")).detach().numpy()
+        loss, accuracy = step_shape_helper(
+            outputs=outputs,
+            target=y_train,
+            batch_size=len(X_train),
+            loss_fn=loss_fn,
+            accuracy_fn=accuracy_fn,
         )
+
+        train_loss += loss.detach().cpu().numpy()
+        train_accuracy += accuracy.detach().numpy()
 
         # clear optimizer accumulation
         optimizer.zero_grad()
@@ -108,10 +128,7 @@ def train_step(
     train_loss /= len(dataloader)
     train_accuracy /= len(dataloader)
 
-    print(
-        f"Train loss: {train_loss:.5f}\
-            Train Accuracy: {train_accuracy:.5f}"
-    )
+    print(f"Train loss: {train_loss:.5f} Train Accuracy: {train_accuracy:.5f}")
 
     return train_loss, train_accuracy
 
@@ -135,25 +152,31 @@ def dev_step(
     """
     dev_loss, dev_accuracy = 0, 0
 
-    for batch, (X_dev, y_dev) in enumerate(dataloader):
+    for batch_i, (X_dev, y_dev) in enumerate(dataloader):
         # faster inferences, no autograd
         with torch.inference_mode():
             # forward pass
+            # outputs are in the format [logit(false),logit(true)] for each sample
+            # logit = log(unnormalized probability)
             outputs = model(X_dev.to(device))["out"]
 
             # calculate loss & accuracy
-            loss = loss_fn(outputs, y_dev)
-            dev_loss += loss.cpu().detach().numpy()
-            dev_accuracy += accuracy_fn(outputs, y_dev).detach().numpy()
+            loss, accuracy = step_shape_helper(
+                outputs=outputs,
+                target=y_dev,
+                batch_size=len(X_dev),
+                loss_fn=loss_fn,
+                accuracy_fn=accuracy_fn,
+            )
+
+            dev_loss += loss.detach().cpu().numpy()
+            dev_accuracy += accuracy.detach().numpy()
 
     # average loss & accuracy across batch
     dev_loss /= len(dataloader)
     dev_accuracy /= len(dataloader)
 
-    print(
-        f"Dev loss: {dev_loss:.5f}\
-            Dev Accuracy: {dev_accuracy:.5f}"
-    )
+    print(f"Dev loss: {dev_loss:.5f} Dev Accuracy: {dev_accuracy:.5f}")
 
     return dev_loss, dev_accuracy
 
@@ -182,10 +205,16 @@ def train(
             model, dev_dataloader, loss_fn, accuracy_fn, device
         )
 
-        # update results
+        # update & save results
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
         results["dev_loss"].append(dev_loss)
         results["dev_acc"].append(dev_acc)
+
+        # save training results
+        pd.DataFrame(results).to_csv(
+            Path(f"./models/{MODEL_NAME}/{MODEL_NAME}_training.csv"),
+            index_label="epoch",
+        )
 
     return results
