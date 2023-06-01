@@ -79,6 +79,9 @@ class SegmentationDataset(Dataset):
 
         if self.mask_transform is not None:
             mask = self.mask_transform(mask)
+            # ToTensor divides by 256
+            mask *= 256
+            mask = mask.long()
 
         return (image.to(self.device), mask.to(self.device))
 
