@@ -14,5 +14,5 @@ NUM_CLASSES = 2  # foreground + background
 TRAIN_DIR = Path("./data/train/")
 DEV_DIR = Path("./data/dev/")
 TEST_DIR = Path("./data/test/")
-IMAGE_HEIGHT = 20
-IMAGE_WIDTH = 20
+IMAGE_HEIGHT = 100
+IMAGE_WIDTH = 100

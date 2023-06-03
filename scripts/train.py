@@ -10,12 +10,29 @@ import pandas as pd
 import data, model, engine, utils
 from constants import *
 from torchvision.models.segmentation.deeplabv3 import DeepLabHead
+import wandb
 
+run = wandb.init(
+    project="Universal Mask Finding",
+    config={
+        "learning_rate": LEARNING_RATE,
+        "epochs": NUM_EPOCHS,
+        "batch_size": NUM_BATCHES,
+        "image_size": f"{IMAGE_HEIGHT}x{IMAGE_WIDTH}",
+    },
+)
+
+if torch.cuda.is_available():
+    torch.cuda.init()
+    device = "cuda"
+else:
+    device = "cpu"
+
+# For M1 Mac
 # if torch.backends.mps.is_available() and torch.backends.mps.is_built():
 #     device = "mps"
 # else:
 #     device = "cpu"
-device = "mps"
 
 # ------------------ Data ------------------
 image_transform = transforms.Compose(

@@ -8,6 +8,7 @@ from typing import Tuple
 from einops import rearrange
 from constants import *
 import pandas as pd
+import wandb
 
 
 def step_shape_helper(
@@ -210,6 +211,15 @@ def train(
         results["train_acc"].append(train_acc)
         results["dev_loss"].append(dev_loss)
         results["dev_acc"].append(dev_acc)
+
+        wandb.log(
+            {
+                "train_loss": train_loss,
+                "train_acc": train_loss,
+                "dev_loss": dev_loss,
+                "dev_acc": dev_loss,
+            }
+        )
 
         # save training results
         pd.DataFrame(results).to_csv(
