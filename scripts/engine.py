@@ -195,7 +195,6 @@ def train(
     # for tracking learning
     results = {"train_loss": [], "train_acc": [], "dev_loss": [], "dev_acc": []}
 
-    # accuracy_fn = torchmetrics.Accuracy(task="multiclass", num_classes=NUM_CLASSES)
     for epoch in tqdm(range(epochs)):
         print(f"-------Epoch: {epoch}-------")
         train_loss, train_acc = train_step(
@@ -215,9 +214,9 @@ def train(
         wandb.log(
             {
                 "train_loss": train_loss,
-                "train_acc": train_loss,
+                "train_acc": train_acc,
                 "dev_loss": dev_loss,
-                "dev_acc": dev_loss,
+                "dev_acc": dev_acc,
             }
         )
 

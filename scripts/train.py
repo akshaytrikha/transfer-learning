@@ -84,6 +84,8 @@ optimizer = torch.optim.SGD(params=model.parameters(), lr=LEARNING_RATE)
 accuracy_fn = torchmetrics.Accuracy(task="binary", num_classes=NUM_CLASSES)
 # accuracy_fn = torchmetrics.JaccardIndex(task="binary", num_classes=1)
 
+Path(f"./models/{MODEL_NAME}").mkdir(parents=True, exist_ok=True)
+
 # train model
 training_results = engine.train(
     model,
