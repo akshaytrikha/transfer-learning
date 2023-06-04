@@ -69,7 +69,7 @@ class SegmentationDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
-        # load image and mask into memory
+        # load image, mask & filename into memory
         image = pil_loader(self.image_paths[idx], mode="RGB")
         mask = pil_loader(self.mask_paths[idx], mode="L")
 
@@ -83,7 +83,7 @@ class SegmentationDataset(Dataset):
             mask *= 256
             mask = mask.long()
 
-        return (image.to(self.device), mask.to(self.device))
+        return (image.to(self.device), mask.to(self.device), self.image_paths[idx].name)
 
     def get_images(self, idx):
         image, mask = self[idx]

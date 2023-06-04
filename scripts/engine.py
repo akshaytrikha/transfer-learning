@@ -5,74 +5,10 @@ from torch.optim import Optimizer
 from torchmetrics import Accuracy
 from tqdm.auto import tqdm
 from typing import Tuple
-from einops import rearrange
 from constants import *
 import pandas as pd
-from utils import EarlyStopper
+from utils import step_shape_helper, EarlyStopper
 import wandb
-
-
-def step_shape_helper(
-    outputs: torch.Tensor,
-    target: torch.Tensor,
-    batch_size: int,
-    loss_fn: nn.Module,
-    accuracy_fn: Accuracy,
-):
-    """formats tensors in correct shape and calculates loss & accuracy
-    Args:
-        outputs (torch.Tensor): model outputs with shape (batch, classes, height, width)
-        target (torch.Tensor): ground truth training data with shape (batch, 1, height, width)
-        batch_size (int): length of current batch
-        loss_fn (nn.Module): function used to calculate loss
-        accuracy_fn (Accuracy): function used to calculate accuracy
-
-    Returns:
-        loss (torch.Tensor): calulcated loss
-        accuracy (torch.Tensor): calculated accuracy
-    """
-    # modify outputs to be in format [logit(true)] for each sample
-    # and match same dims as y_train
-    # new shape: [32, 1, height, width]
-    outputs = rearrange(
-        outputs,
-        "bat cla height width -> bat cla height width",
-        bat=batch_size,
-        cla=NUM_CLASSES,
-        height=IMAGE_HEIGHT,
-        width=IMAGE_WIDTH,
-    )
-
-    target = rearrange(
-        target,
-        "bat cla height width -> bat cla height width",
-        bat=batch_size,
-        cla=1,
-        height=IMAGE_HEIGHT,
-        width=IMAGE_WIDTH,
-    )
-
-    # calculate pytorch loss
-    loss = loss_fn(
-        outputs,
-        rearrange(target, "bat cla height width -> (bat cla) height width"),
-    )
-
-    # calculate accuracy
-    # binarize predictions by taking softmax
-    outputs = nn.functional.softmax(outputs, dim=1)[:, 1, :, :]
-    outputs = rearrange(
-        outputs,
-        "bat height width -> bat 1 height width",
-        bat=batch_size,
-        height=IMAGE_HEIGHT,
-        width=IMAGE_WIDTH,
-    )
-
-    y_pred = (outputs > 0.5).type(torch.int32)
-    # new shape: [32, 1, height, width]
-
-    return (loss, accuracy_fn(y_pred.to("cpu"), target.to("cpu")))
 
 
 def train_step(
@@ -97,7 +33,9 @@ def train_step(
     """
     train_loss, train_accuracy = 0, 0
 
-    for batch_i, (X_train, y_train) in enumerate(dataloader):
+    for batch_i, (X_train, y_train, filenames) in enumerate(dataloader):
+        breakpoint()
+
         # training mode
         model.train()
 
@@ -107,7 +45,7 @@ def train_step(
         outputs = model(X_train.to(device))["out"]
 
         # calculate loss & accuracy
-        loss, accuracy = step_shape_helper(
+        loss, accuracy, _ = step_shape_helper(
             outputs=outputs,
             target=y_train,
             batch_size=len(X_train),
@@ -156,7 +94,7 @@ def dev_step(
     """
     dev_loss, dev_accuracy = 0, 0
 
-    for batch_i, (X_dev, y_dev) in enumerate(dataloader):
+    for batch_i, (X_dev, y_dev, filenames) in enumerate(dataloader):
         # faster inferences, no autograd
         with torch.inference_mode():
             # forward pass
@@ -165,7 +103,7 @@ def dev_step(
             outputs = model(X_dev.to(device))["out"]
 
             # calculate loss & accuracy
-            loss, accuracy = step_shape_helper(
+            loss, accuracy, _ = step_shape_helper(
                 outputs=outputs,
                 target=y_dev,
                 batch_size=len(X_dev),

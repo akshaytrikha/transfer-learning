@@ -82,6 +82,7 @@ optimizer = torch.optim.SGD(params=model.parameters(), lr=LEARNING_RATE)
 accuracy_fn = torchmetrics.Accuracy(task="binary", num_classes=NUM_CLASSES)
 
 Path(f"./models/{MODEL_NAME}").mkdir(parents=True, exist_ok=True)
+Path(f"./models/{MODEL_NAME}/test_predictions").mkdir(parents=True, exist_ok=True)
 
 # train model
 training_results = engine.train(
@@ -98,3 +99,6 @@ training_results = engine.train(
 
 # save model
 utils.save_model(model, MODEL_NAME)
+
+# run test loop
+testing_results = utils.test_step(model, test_dataloader, loss_fn, accuracy_fn, device)
