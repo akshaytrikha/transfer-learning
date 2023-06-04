@@ -8,6 +8,7 @@ from typing import Tuple
 from einops import rearrange
 from constants import *
 import pandas as pd
+from utils import EarlyStopper
 import wandb
 
 
@@ -85,10 +86,11 @@ def train_step(
     """performs one training iteration with a batch
     Args:
         model (nn.Module): model to be trained
-        dataloader (DataLoader) training dataloader
-        loss_fn (nn.Module) loss function to minimize
-        optimizer (Optimizer) optimization function
-        device (torch.device): "cpu" or "cuda"
+        dataloader (DataLoader): training dataloader
+        loss_fn (nn.Module): loss function to minimize
+        optimizer (Optimizer): optimization function
+        accuracy_fn (fn): accuracy function
+        device (torch.device): "cpu", "cuda", or "mps"
 
     Returns:
         Tuple[train_loss (float), train_accuracy (float)]
@@ -144,9 +146,10 @@ def dev_step(
     """performs one validation step with a batch
     Args:
         model (nn.Module): model to be trained
-        dataloader (DataLoader) validation dataloader
-        loss_fn (nn.Module) loss function
-        device (torch.device): "cpu" or "cuda"
+        dataloader (DataLoader): validation dataloader
+        loss_fn (nn.Module): loss function
+        accuracy_fn (fn): accuracy function
+        device (torch.device): "cpu", "cuda", or "mps"
 
     Returns:
         Tuple[train_loss (float), train_accuracy (float)]
@@ -192,11 +195,12 @@ def train(
     epochs: int,
     device: torch.device,
 ):
-    # for tracking learning
     results = {"train_loss": [], "train_acc": [], "dev_loss": [], "dev_acc": []}
+    early_stopper = EarlyStopper(patience=3, min_delta=0.005)
 
     for epoch in tqdm(range(epochs)):
         print(f"-------Epoch: {epoch}-------")
+
         train_loss, train_acc = train_step(
             model, train_dataloader, loss_fn, optimizer, accuracy_fn, device
         )
@@ -226,4 +230,7 @@ def train(
             index_label="epoch",
         )
 
+        # early stopping
+        if early_stopper.early_stop(dev_loss):
+            break
     return results

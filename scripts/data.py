@@ -104,14 +104,16 @@ def create_dataloaders(
     """create dataloaders from corresponding directories
 
     Args:
-        train_dir (Path): training directory.
-        test_dir (Path) to validation directory.
-        transform (torchvision.transforms.Compose) to perform on training and testing data.
-        batch_size (int) number of samples per batch in each of the DataLoaders.
-        num_workers (int) for number of workers per DataLoader.
-
+        train_dir (Path): training directory
+        dev_dir (Path): validation directory
+        test_dir (Path) test directory
+        batch_size (int) number of samples per batch in each of the DataLoaders
+        device (torch.device): "cpu", "cuda", or "mps"
+        image_transform (torchvision.transforms.Compose) to perform on training and testing input data
+        mask_transform (torchvision.transforms.Compose) to perform on training and testing targets
+        num_workers (int) number of workers per DataLoader
     Returns:
-        Tuple[train_dataloader, test_dataloader, class_names]
+        Tuple[train_dataloader, test_dataloader, test_dataloader, class_names]
     """
     # read data
     class_map_path = train_dir.parent / "defect_map.json"

@@ -39,7 +39,6 @@ image_transform = transforms.Compose(
     [
         transforms.Resize((IMAGE_HEIGHT, IMAGE_WIDTH)),
         transforms.ToTensor(),
-        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]
 )
 
@@ -78,11 +77,9 @@ torch.manual_seed = RANDOM_SEED
 
 # ------------------ Training ------------------
 # define loss, optimizer, accuracy
-# loss_fn = torch.nn.MSELoss(reduction="mean")
 loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(params=model.parameters(), lr=LEARNING_RATE)
 accuracy_fn = torchmetrics.Accuracy(task="binary", num_classes=NUM_CLASSES)
-# accuracy_fn = torchmetrics.JaccardIndex(task="binary", num_classes=1)
 
 Path(f"./models/{MODEL_NAME}").mkdir(parents=True, exist_ok=True)
 
