@@ -163,12 +163,12 @@ def test_step(
     test_acc /= len(dataloader)
 
     # # save results
-    # wandb.log(
-    #     {
-    #         "test_loss": test_loss,
-    #         "test_acc": test_acc,
-    #     }
-    # )
+    wandb.log(
+        {
+            "test_loss": test_loss,
+            "test_acc": test_acc,
+        }
+    )
 
     print(f"Test loss: {test_loss:.5f} Test Accuracy: {test_acc:.5f}")
 
