@@ -1,5 +1,3 @@
-import sys
-import os
 from pathlib import Path
 import torch
 from torch import nn
@@ -13,23 +11,6 @@ from tqdm import tqdm
 import wandb
 
 from constants import *
-
-try:
-    from urllib import urlretrieve
-except ImportError:
-    from urllib.request import urlretrieve
-import torch
-
-
-def load_url(url, model_dir="./pretrained", map_location=None):
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-    filename = url.split("/")[-1]
-    cached_file = os.path.join(model_dir, filename)
-    if not os.path.exists(cached_file):
-        sys.stderr.write('Downloading: "{}" to {}\n'.format(url, cached_file))
-        urlretrieve(url, cached_file)
-    return torch.load(cached_file, map_location=map_location)
 
 
 def save_model(model: nn.Module, model_name: str):
@@ -171,23 +152,24 @@ def test_step(
             test_acc += accuracy.detach().numpy()
 
             # save predictions as .png
-            for i, prediction in enumerate(y_pred):
-                cv2.imwrite(
-                    f"./models/{MODEL_NAME}/test_predictions/{filenames[i]}",
-                    prediction.squeeze().numpy() * 100,
-                )
+            # for i, prediction in enumerate(y_pred):
+            #     cv2.imwrite(
+            #         f"./models/{MODEL_NAME}/test_predictions/{filenames[i]}",
+            #         prediction.squeeze().numpy() * 100,
+            #     )
 
     # average loss & accuracy across batch
     test_loss /= len(dataloader)
-    test_accuracy /= len(dataloader)
+    test_acc /= len(dataloader)
 
-    wandb.log(
-        {
-            "test_loss": test_loss,
-            "test_acc": test_acc,
-        }
-    )
+    # # save results
+    # wandb.log(
+    #     {
+    #         "test_loss": test_loss,
+    #         "test_acc": test_acc,
+    #     }
+    # )
 
-    print(f"Test loss: {test_loss:.5f} Test Accuracy: {test_accuracy:.5f}")
+    print(f"Test loss: {test_loss:.5f} Test Accuracy: {test_acc:.5f}")
 
-    return test_loss, test_accuracy
+    return test_loss, test_acc

@@ -8,7 +8,7 @@ from pathlib import Path
 from torchvision.models.segmentation.deeplabv3 import DeepLabHead
 import wandb
 
-import data, model, engine, utils
+import data, engine, utils
 from constants import *
 
 run = wandb.init(
@@ -100,4 +100,6 @@ training_results = engine.train(
 utils.save_model(model, MODEL_NAME)
 
 # run test loop
-testing_results = utils.test_step(model, test_dataloader, loss_fn, accuracy_fn, device)
+test_loss, test_acc = utils.test_step(
+    model, test_dataloader, loss_fn, accuracy_fn, device
+)
