@@ -9,8 +9,10 @@ import numpy as np
 from typing import Union
 from einops import rearrange
 import cv2
-from constants import *
+from tqdm import tqdm
 import wandb
+
+from constants import *
 
 try:
     from urllib import urlretrieve
@@ -146,9 +148,9 @@ def test_step(
     accuracy_fn: Accuracy,
     device: torch.device,
 ):
-    test_loss, test_accuracy = 0, 0
+    test_loss, test_acc = 0, 0
 
-    for batch_i, (X_test, y_test, filenames) in enumerate(dataloader):
+    for batch_i, (X_test, y_test, filenames) in enumerate(tqdm(dataloader)):
         # faster inferences, no autograd
         with torch.inference_mode():
             # forward pass
@@ -171,7 +173,8 @@ def test_step(
             # save predictions as .png
             for i, prediction in enumerate(y_pred):
                 cv2.imwrite(
-                    f"./models/{MODEL_NAME}/test_predictions/{filenames[i]}", prediction
+                    f"./models/{MODEL_NAME}/test_predictions/{filenames[i]}",
+                    prediction.squeeze().numpy() * 100,
                 )
 
     # average loss & accuracy across batch

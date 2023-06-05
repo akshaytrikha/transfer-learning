@@ -5,12 +5,11 @@ from torchvision import transforms
 import torchmetrics
 from torchinfo import summary
 from pathlib import Path
-import os
-import pandas as pd
-import data, model, engine, utils
-from constants import *
 from torchvision.models.segmentation.deeplabv3 import DeepLabHead
 import wandb
+
+import data, model, engine, utils
+from constants import *
 
 run = wandb.init(
     project="Universal Mask Finding",
