@@ -34,8 +34,6 @@ def train_step(
     train_loss, train_accuracy = 0, 0
 
     for batch_i, (X_train, y_train, filenames) in enumerate(dataloader):
-        breakpoint()
-
         # training mode
         model.train()
 

@@ -152,11 +152,11 @@ def test_step(
             test_acc += accuracy.detach().numpy()
 
             # save predictions as .png
-            # for i, prediction in enumerate(y_pred):
-            #     cv2.imwrite(
-            #         f"./models/{MODEL_NAME}/test_predictions/{filenames[i]}",
-            #         prediction.squeeze().numpy() * 100,
-            #     )
+            for i, prediction in enumerate(y_pred):
+                cv2.imwrite(
+                    f"./models/{MODEL_NAME}/test_predictions/{filenames[i]}",
+                    prediction.squeeze().numpy() * 100,
+                )
 
     # average loss & accuracy across batch
     test_loss /= len(dataloader)
