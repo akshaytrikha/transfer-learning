@@ -23,6 +23,7 @@ run = wandb.init(
 
 if torch.cuda.is_available():
     torch.cuda.init()
+    torch.cuda.empty_cache()
     device = "cuda"
 else:
     device = "cpu"

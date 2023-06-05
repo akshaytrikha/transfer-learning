@@ -155,7 +155,7 @@ def test_step(
             for i, prediction in enumerate(y_pred):
                 cv2.imwrite(
                     f"./models/{MODEL_NAME}/test_predictions/{filenames[i]}",
-                    prediction.squeeze().numpy() * 100,
+                    prediction.squeeze().cpu().numpy() * 100,
                 )
 
     # average loss & accuracy across batch
