@@ -1,4 +1,5 @@
 from pathlib import Path
+import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -45,7 +46,7 @@ class SegmentationDataset(Dataset):
         class_map_path: Path,
         image_transform: transforms.Compose,
         mask_transform: transforms.Compose,
-        device: str,
+        device: torch.device,
     ):
         # store the image & mask filepaths, augmentation transforms
         self.image_paths = [
@@ -96,7 +97,7 @@ def create_dataloaders(
     dev_dir: Path,
     test_dir: Path,
     batch_size: int,
-    device: str,
+    device: torch.device,
     image_transform: transforms.Compose,
     mask_transform: transforms.Compose,
     num_workers: int = 0,
