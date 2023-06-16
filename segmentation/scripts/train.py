@@ -25,14 +25,11 @@ if torch.cuda.is_available():
     torch.cuda.init()
     torch.cuda.empty_cache()
     device = "cuda"
+elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+    # Apple Silicon
+    device = "mps"
 else:
     device = "cpu"
-
-# For M1 Mac
-# if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-#     device = "mps"
-# else:
-#     device = "cpu"
 
 # ------------------ Data ------------------
 image_transform = transforms.Compose(
@@ -53,7 +50,6 @@ mask_transform = transforms.Compose(
     train_dataloader,
     dev_dataloader,
     test_dataloader,
-    class_names,
 ) = data.create_dataloaders(
     train_dir=TRAIN_DIR,
     dev_dir=DEV_DIR,

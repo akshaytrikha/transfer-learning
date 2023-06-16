@@ -29,14 +29,18 @@ def find_classes(class_map_path: Path) -> Tuple[List[str], Dict[str, int]]:
      "n": "class_n"
     }
 
+    Returns:
+        classes List[str]: list containing class names
+        idx_to_class Dict[int, str]: pixel value to class name map 
+        class_to_idx Dict[str, idx]: class name to pixel value map 
     """
-
     with open(class_map_path, "rb") as open_file:
         idx_to_class = json.load(open_file)
+        idx_to_class = {int(k): v for k, v in idx_to_class.items()}  # convert keys to int
 
     classes = idx_to_class.values()
 
-    return classes, idx_to_class
+    return classes, idx_to_class, {v: k for k, v in idx_to_class.items()}
 
 
 class SegmentationDataset(Dataset):
@@ -62,7 +66,7 @@ class SegmentationDataset(Dataset):
         self.image_transform = image_transform
         self.mask_transform = mask_transform
 
-        self.classes, self.idx_to_class = find_classes(class_map_path)
+        self.classes, self.idx_to_class, self.class_to_idx = find_classes(class_map_path)
         self.device = device
 
     def __len__(self):
@@ -114,9 +118,9 @@ def create_dataloaders(
         mask_transform (torchvision.transforms.Compose) to perform on training and testing targets
         num_workers (int) number of workers per DataLoader
     Returns:
-        Tuple[train_dataloader, test_dataloader, test_dataloader, class_names]
+        Tuple[train_dataloader, dev_dataloader, test_dataloader]
     """
-    # read data
+    # read data into create datasets
     class_map_path = train_dir.parent / "defect_map.json"
     train_data = SegmentationDataset(
         train_dir,
@@ -140,8 +144,6 @@ def create_dataloaders(
         device=device,
     )
 
-    class_names = train_data.classes
-
     # convert images into dataloaders
     train_dataloader = DataLoader(
         train_data, batch_size=batch_size, shuffle=True, num_workers=num_workers
@@ -153,4 +155,4 @@ def create_dataloaders(
         test_data, batch_size=batch_size, num_workers=num_workers
     )
 
-    return train_dataloader, dev_dataloader, test_dataloader, class_names
+    return train_dataloader, dev_dataloader, test_dataloader
