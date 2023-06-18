@@ -7,8 +7,9 @@ from tqdm.auto import tqdm
 from typing import Tuple
 from constants import *
 import pandas as pd
-from utils import step_shape_helper, EarlyStopper
 import wandb
+
+from utils import EarlyStopper
 
 
 def train_step(
@@ -38,19 +39,14 @@ def train_step(
         model.train()
 
         # forward pass
-        # outputs are in the format [logit(false),logit(true)] for each sample
+        # outputs are in the format [logit(true)] for each sample
         # logit = log(unnormalized probability)
-        outputs = model(X_train.to(device))["out"]
+        outputs = model(X_train.to(device))
 
         # calculate loss & accuracy
-        loss, accuracy, _ = step_shape_helper(
-            outputs=outputs,
-            target=y_train,
-            batch_size=len(X_train),
-            loss_fn=loss_fn,
-            accuracy_fn=accuracy_fn,
-        )
-
+        loss = loss_fn(outputs, y_train)
+        accuracy = accuracy_fn(outputs, y_train)
+        
         train_loss += loss.detach().cpu().numpy()
         train_accuracy += accuracy.detach().numpy()
 
@@ -96,18 +92,13 @@ def dev_step(
         # faster inferences, no autograd
         with torch.inference_mode():
             # forward pass
-            # outputs are in the format [logit(false),logit(true)] for each sample
+            # outputs are in the format [logit(true)] for each sample
             # logit = log(unnormalized probability)
-            outputs = model(X_dev.to(device))["out"]
+            outputs = model(X_dev.to(device))
 
             # calculate loss & accuracy
-            loss, accuracy, _ = step_shape_helper(
-                outputs=outputs,
-                target=y_dev,
-                batch_size=len(X_dev),
-                loss_fn=loss_fn,
-                accuracy_fn=accuracy_fn,
-            )
+            loss = loss_fn(outputs, y_dev)
+            accuracy = accuracy_fn(outputs, y_dev)
 
             dev_loss += loss.detach().cpu().numpy()
             dev_accuracy += accuracy.detach().numpy()
@@ -134,7 +125,7 @@ def train(
     results = {"train_loss": [], "train_acc": [], "dev_loss": [], "dev_acc": []}
     early_stopper = EarlyStopper(patience=3, min_delta=0.001)
 
-    for epoch in tqdm(range(epochs)):
+    for epoch in tqdm(range(epochs)):   
         print(f"-------Epoch: {epoch}-------")
 
         train_loss, train_acc = train_step(
@@ -170,3 +161,54 @@ def train(
         if early_stopper.early_stop(dev_loss):
             break
     return results
+
+
+def test_step(
+    model: nn.Module,
+    dataloader: DataLoader,
+    loss_fn: nn.Module,
+    accuracy_fn: Accuracy,
+    device: torch.device,
+):
+    test_loss, test_acc = 0, 0
+
+    results_df = pd.DataFrame(columns=["filename", "ground_truth", "prediction"])
+
+    for batch_i, (X_test, y_test, filenames) in enumerate(tqdm(dataloader)):
+        # faster inferences, no autograd
+        with torch.inference_mode():
+            # forward pass
+            # outputs are in the format [logit(true)] for each sample
+            # logit = log(unnormalized probability)
+            outputs = model(X_test.to(device))
+            predictions = nn.Sigmoid(outputs) > 0.5
+
+            # calculate loss & accuracy
+            loss = loss_fn(outputs, y_test)
+            accuracy = accuracy_fn(outputs, y_test)
+
+            test_loss += loss.detach().cpu().numpy()
+            test_acc += accuracy.detach().numpy()
+
+            # save predictions as .csv
+            results_df["filename"] += filenames
+            results_df["ground_truth"] += [dataloader.dataset.idx_to_class[x] for x in X_test]
+            results_df["prediction"] += [dataloader.dataset.idx_to_class[x] for x in outputs]
+
+    # average loss & accuracy across batch
+    test_loss /= len(dataloader)
+    test_acc /= len(dataloader)
+
+    # save results
+    wandb.log(
+        {
+            "test_loss": test_loss,
+            "test_acc": test_acc,
+        }
+    )
+
+    print(f"Test loss: {test_loss:.5f} Test Accuracy: {test_acc:.5f}")
+
+    results_df.to_csv(Path(f"./models/{MODEL_NAME}/{MODEL_NAME}_testing.csv"),)
+
+    return test_loss, test_acc

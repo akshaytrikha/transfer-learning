@@ -189,7 +189,7 @@ def test_step(
     test_loss /= len(dataloader)
     test_acc /= len(dataloader)
 
-    # # save results
+    # save results
     wandb.log(
         {
             "test_loss": test_loss,

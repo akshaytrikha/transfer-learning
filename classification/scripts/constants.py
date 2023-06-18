@@ -4,6 +4,7 @@ import os
 MODEL_NAME = "HiFiSCDS Classification 23_06_14"
 RANDOM_SEED = 100
 NUM_WORKERS = os.cpu_count()
+CLASSIFIER_IN_FEATURES = 1280
 
 # hyperparameters
 NUM_BATCHES = 16

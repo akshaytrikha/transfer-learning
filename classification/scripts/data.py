@@ -6,7 +6,7 @@ import json
 import os
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision import datasets, transforms
+from torchvision import transforms
 
 
 IMAGE_FILE_REGEX = re.compile("[-\w]+\.(?:png|jpg|jpeg|tif|tiff|bmp)")

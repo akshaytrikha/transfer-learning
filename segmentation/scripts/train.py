@@ -92,7 +92,6 @@ training_results = engine.train(
     device,
 )
 
-
 # save model
 utils.save_model(model, MODEL_NAME)
 
