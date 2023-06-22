@@ -16,7 +16,7 @@ run = wandb.init(
     config={
         "learning_rate": LEARNING_RATE,
         "epochs": NUM_EPOCHS,
-        "batch_size": NUM_BATCHES,
+        "batch_size": BATCH_SIZE,
         "image_size": f"{IMAGE_HEIGHT}x{IMAGE_WIDTH}",
     },
 )
@@ -46,15 +46,11 @@ mask_transform = transforms.Compose(
     ]
 )
 
-(
-    train_dataloader,
-    dev_dataloader,
-    test_dataloader,
-) = data.create_dataloaders(
+train_dataloader, dev_dataloader, test_dataloader = data.create_dataloaders(
     train_dir=TRAIN_DIR,
     dev_dir=DEV_DIR,
     test_dir=TEST_DIR,
-    batch_size=NUM_BATCHES,
+    batch_size=BATCH_SIZE,
     device=device,
     image_transform=image_transform,
     mask_transform=mask_transform,

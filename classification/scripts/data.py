@@ -68,7 +68,7 @@ class ClassificationDataset(Dataset):
                 split_filepaths = os.listdir(data_dir / filename / split)
 
                 # append paths to images, corresponding labels
-                self.image_paths += split_filepaths
+                self.image_paths += [data_dir / filename / split / x for x in split_filepaths]
                 self.labels += [self.class_to_idx[filename]] * len(split_filepaths)
 
         self.image_transform = image_transform
@@ -86,7 +86,7 @@ class ClassificationDataset(Dataset):
         if self.image_transform is not None:
             image = self.image_transform(image)
 
-        return (image.to(self.device), self.image_paths[idx].name)
+        return image.to(self.device), torch.tensor(self.labels[idx], dtype=torch.float32, device=self.device), self.image_paths[idx].name
 
 
 def create_dataloaders(

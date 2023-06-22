@@ -6,7 +6,7 @@ RANDOM_SEED = 100
 NUM_WORKERS = os.cpu_count()
 
 # hyperparameters
-NUM_BATCHES = 2
+BATCH_SIZE = 2
 NUM_EPOCHS = 100
 LEARNING_RATE = 0.001
 NUM_CLASSES = 2  # foreground + background
