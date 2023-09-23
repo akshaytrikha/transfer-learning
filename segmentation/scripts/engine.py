@@ -132,7 +132,9 @@ def train(
     device: torch.device,
 ):
     results = {"train_loss": [], "train_acc": [], "dev_loss": [], "dev_acc": []}
-    early_stopper = EarlyStopper(patience=3, min_delta=0.001)
+    early_stopper = EarlyStopper(
+        patience=EARLY_STOP_PATIENCE, min_delta=EARLY_STOP_MIN_DELTA
+    )
 
     for epoch in tqdm(range(epochs)):
         print(f"-------Epoch: {epoch}-------")

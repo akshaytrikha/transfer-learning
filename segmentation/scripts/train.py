@@ -64,6 +64,14 @@ model = torchvision.models.segmentation.deeplabv3_resnet50(weights=weights).to(d
 # modify classifier layer for desired number of classes
 model.classifier = DeepLabHead(in_channels=2048, num_classes=NUM_CLASSES)
 
+# Freeze all layers
+for param in model.parameters():
+    param.requires_grad = False
+
+# Unfreeze the DeepLabHead classifier
+for param in model.classifier.parameters():
+    param.requires_grad = True
+
 model.to(device)
 torch.manual_seed = RANDOM_SEED
 

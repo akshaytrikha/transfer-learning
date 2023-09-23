@@ -105,9 +105,7 @@ def step_shape_helper(
         accuracy (torch.Tensor): calculated accuracy
         y_pred (torch.Tensor): binarized predictions
     """
-    # modify outputs to be in format [logit(true)] for each sample
-    # and match same dims as y_train
-    # new shape: [32, 1, height, width]
+    # verify outputs and target have shape [batch_size, num_classes, height, width]
     outputs = rearrange(
         outputs,
         "bat cla height width -> bat cla height width",
@@ -126,15 +124,21 @@ def step_shape_helper(
         width=IMAGE_WIDTH,
     )
 
+    # target must have shape [batch_size, height, width]
     # calculate pytorch loss
     loss = loss_fn(
         outputs,
         rearrange(target, "bat cla height width -> (bat cla) height width"),
     )
 
-    # calculate accuracy
+    breakpoint()
+
     # binarize predictions by taking softmax
-    outputs = nn.functional.softmax(outputs, dim=1)[:, 1, :, :]
+    # modify outputs to be in format [logit(true)] for each sample
+    outputs = nn.functional.softmax(outputs[:, 1, :, :], dim=1)
+
+    # match same dims as y_train
+    # new shape: [32, 1, height, width]
     outputs = rearrange(
         outputs,
         "bat height width -> bat 1 height width",
@@ -146,6 +150,7 @@ def step_shape_helper(
     y_pred = (outputs > 0.5).type(torch.int32)
     # new shape: [32, 1, height, width]
 
+    # calculate accuracy
     return (loss, accuracy_fn(y_pred.to("cpu"), target.to("cpu")), y_pred)
 
 
